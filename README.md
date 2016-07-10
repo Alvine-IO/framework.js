@@ -2,7 +2,10 @@
 
 # Alvine
 
-Das Alvine-JS-Framework kann über das [CDN][alvineio] geladen werden.
+Das Alvine-JS-Framework kann über das [CDN][cdn.alvine.io/libs/alvine/framework/alvine.framework-0.9.1.min.js] geladen werden.
+Die Integration erfolgt über einen Script-Tag in der HTML-Seite
+
+    <script src="//cdn.alvine.io/libs/alvine/framework/alvine.framework-0.9.1.min.js"></script>
 
 ## Core
 
