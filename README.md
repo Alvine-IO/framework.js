@@ -2,10 +2,10 @@
 
 # Alvine
 
-Das Alvine-JS-Framework kann über das [CDN][cdn.alvine.io/libs/alvine/framework/alvine.framework-0.9.1.min.js] geladen werden.
-Die Integration erfolgt über einen Script-Tag in der HTML-Seite
+Das Alvine-JS-Framework kann über das [CDN][//cdn.alvine.io/libs/alvine/framework/alvine.framework-0.10.0.min.js] geladen werden.
+Die Integration in eine HTML-Seite erfolgt über das folgende Script-Tag
 
-    <script src="//cdn.alvine.io/libs/alvine/framework/alvine.framework-0.9.1.min.js"></script>
+    <script src="//cdn.alvine.io/libs/alvine/framework/alvine.framework-0.10.0.min.js"></script>
 
 ## Core
 
@@ -67,6 +67,15 @@ Mittels der Funktion  kann auch eine maximale und eine minimale Grenze definiert
     Alvine.Math.Random.createInteger(100,1000)
     // -> 845
 
+## Persistence
+
+### Registry
+
+Das Registry-Objekt ist eine Speziaisierung von Map für die Verwaltung von Daten.
+Eine zentrale Instanz der Registry ist im Namepsace unter Alvine.Registry eingehängt.
+Mit den von Map gewohnten Operationen kann auf die Registry zugegriffen werden.
+
+    Alvine.Registry.get(...)
 
 ## Types
 
@@ -105,6 +114,28 @@ dient als Übergabe-Objekt für die verschiedenen Observer Pattern.
                             // ...
                         }, 'arg1', 'arg2', ...); // arg1, arg2, ... wird an update als Parameter übergeben
     observer.update(subject);
+    
+### ObserverList
+
+Das ObserverList-Objekt kann von Objekten benutzt werden um das Observer-Pattern zu implementieren.
+
+    obj = {
+       this.observers = new Alvine.Types.ObserverList();
+       }
+       
+    obj.prototype.attachObserver = function (observer) {
+        this.observers.attach(observer);
+        return this;
+    };
+        
+    obj.prototype.detachObserver = function (observer) {
+        this.observers.detach(observer);
+        return this;
+    };
+        
+    obj.changeValue(newValue) {
+        this.observers.notify(this);
+    }
 
 ### Map
 
@@ -288,6 +319,17 @@ abgesichert. Für eine eindeutigere ID sollte man auf die [UUID](#uuid) zurückg
      id = new ID();
      id.toString()
      // -> Mzn6
+     
+### clone
+
+Die Funktion Alvine.Types.clone() kopiert eine Datenstruktur und erstellt somit ein neues Objekt. 
+Objekte die eine Object.getClone() Methode besitzen werden durch diese Methode geclont. Bei den anderen
+wird durch alle Properties gelaufen und kopiert. In diesem Fall werden Eigenschaften nur dann kopiert
+wenn die Methode Object.hasOwnProperty true zurück gibt.
+
+    map = new Alvine.Types.Map()
+    clone = Alvine.Types.clone(map)
+    
     
 ## I18N
 
@@ -439,6 +481,97 @@ einzelnen Texte geholt werden. Resource ist von Map abgeleitet ([siehe Map](#map
     // -> mein text 
     
     
+## UI
+
+### Form
+
+Das Formularobjekt erlaubt die Verknüpfung eines HTML-Formulars mit einem Dataset. Eingaben und Events eines Formulars
+können so genutzt werden, um die Daten in einem Dataset zu manipulieren. Ein Input wird über data-bind an einen Event 
+gebunden. In diesem Beispiel wird das Dataset nach jedem change-Event geändert.
+
+    <input data-bind="change" ...>
+    
+Möchte man die Änderung über einen Button abschicken, so kann man nach dem Namen des Event einen Selector angeben.
+Jetzt wird der Event an den click-Event des Buttons gebunden.
+
+    <input data-bind="click:#addbutton" ...>
+    <button id="addbutton">hinzufügen</button>    
+    
+Als nächstes muss man den Wert der genommen werden soll deklarieren. In der einfachsten Form wird nur der
+Wert vom Control ausgelesen.
+
+    <input data-handler="value" ...>    
+    
+Über die Methode transformValues() können verschiedene Funktionen zum Bearbeiten der Werte eingesetzt werden.
+Im folgenden Beispiel wird der Wert aus dem Input-Feld genommen und anschließend alle Zeichen in Kleinbuchstaben 
+umgewandelt.
+
+    <input data-handler="value | strtolower" ...>
+    
+Das Data-Attribute data-registry definiert das Dataset in das der Wert eingetragen werden soll. So kann über
+    
+    <input data-registry="myvalues | headline" ...>
+    
+ein Wert in der Map mit dem Schlüssel *headline* im Dataset *myvalues* gesetzt werden. Tiefergehende
+Verschachtelungen lassen sich über eine Pipe hinzufügen. 
+
+Handelt es sich bei dem Zieldaten nicht um eine Map oder soll ein anderer Befehl ausgeführt werden, so kann dieser
+über das *data-action* Attribute definiert werden.
+
+    <input data-action="append" ...>
+
+Über das Data-Attribute *data-prevent* legt man schließlich fest ob der Event eitergegeben werden soll, oder 
+die Verarbeitung abgebrochen werden soll. Dieses Attribute sorgt dafür, dass im Event preventDefault und stopPropagation  
+aufgerufen wird.
+
+Im folgenden Beispiel haben wir eine Liste die über das folgende Dataset in die Registry eingetragen wurde.
+
+    dataset = new Alvine.Markup.Html.Dataset({"headline": "Staedte", "list": ["Muenchen", "Frankfurt", "Berlin"]});
+    Alvine.Registry.set('myvalues', dataset);
+
+Um die Liste leeren zu können, kann ein Button über folgendes HTML definiert werden:
+
+    <button data-bind="click" data-registry="myvalues | list" data-action="clear" data-prevent="event">Liste leeren</button>
+    
+Der Event-Handler hängt am click-Event und verwendet die Dataset-Action clear auf die Collection list in dem Dataset myvalues.
+
+    dataset = new Alvine.Markup.Html.Dataset({"headline": "Staedte", "list": ["Muenchen", "Frankfurt", "Berlin"]});
+    Alvine.Registry.set('myvalues', dataset);
+    
+Um nun einen Wert in diese Liste einzutragen erhält das Formular noch einen Eingabefeld und einen Button
+
+    <input ndata-bind="click:#addbutton" data-handler="value | htmlspecialchars" data-registry="myvalues | list" data-action="append" data-prevent="event">
+    
+Um in einem Formular die Submit-Funktion zu deaktivieren, kann im form-Tag das Attribute data-prevent="submit" definiert werden.
+
+    <form data-prevent="submit">
+    
+Alternativ kann man auch einen Hidden-Tag nach folgendem Beispiel einfügen:
+    
+    <input type="hidden" data-bind="submit:.auto-form" data-prevent="event">
+
+Die Formulare müssen entweder manuell über Javascript
+
+    form = new Alvine.UI.Form('myform')
+
+oder automatisch über die Klasse auto-form nach dem Laden der Seite initialisiert werden.
+
+    <form class="auto-form" ...>
+
+    
+
+*Folgende Attribute sind verfügbar*
+
+| Attribute | Beschreibung                                                                                                                                                                             | Beispiel           |
+|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
+| bind      | Name des Events und optional ein Selector. Wird ein Selektor angegeben wird der Event dieses Objektes abonniert                                                                          | click\[:#button\]    |
+| handler   | Bereitstellung und Transformation des Wertes. Über das Pipesymbol können beliebige Befehle nacheinander ausgeführt werden.                                                               | value \| strtolower |
+| registry  | Definition des Pfades in der Registry. Angefangen mit dem Namen des Eintrags in der Registry, bis zum letzten Schlüssel                                                                  | cities \| list      |
+| action    | Aktion die im Dataset ausgeführt werden soll. Für eine Map stehen die Aktionen: set, remove und clear zur Verfügung. Bei einem Dataset können append, remove und clear verwendet werden. | set                |
+| prevent   | Verhindert das der Event weitergegeben wird.                                                                                                                                             | event              |
+ 
+
+    
 ## Markup
 
 Funktionen und Objekte für die Manipulation von Markups wie HTML.
@@ -558,20 +691,7 @@ vorherigen Befehls.
         <h1>my headline</h1>
     </div>
         
-Folgende Befehle sind verfügbar: 
-
-* strtolower (alles kleingeschrieben), 
-* strtoupper (alles großgeschrieben), 
-* trim (Leerezichen am Anfang un Ende entfernen)
-* plaintext (HTML-Tags entfernen)
-* rawurlencode (URL-Codirung)
-* ucfirst (Erstes Zeichen groß)
-* ucwords (Jeder Wortanfang groß)
-* intval (Integer)
-* length (Länge der Zeichenkette)
-* base64 (Base64)
-* htmlspecialchars (HTML-Sonderzeichen nach Entities)
-* substring (Teilzeichenkette: Die Parameter werden durch Doppelpunkt getrennt => substring:Anfang:Länge)
+Das Template-Objekt verwendet für die Transformation der Werte die Methode [transformValues](#transformValues).
 
 Über die Operation Eigenschaft des Template-Objektes lassen sich weitere Funktionen einfügen.
 Somit lassen sich alle Manipulationen des Wertes bewerkstelligen. Die eigene Operation
@@ -587,6 +707,9 @@ Doppelpunkt angegeben werden, werden direkt an die Funktion übergeben.
     template.Operation.getFullname = function(value, sign) {
         return value+sign;
     };
+    
+    // Der Operator muss vor dem Aufruf der Funktion getHtmlFragment() definiert sein.     
+    template.getHtmlFragment(dataset);
     
 Ein weiterer Befehl ist *data-replaceself*. Hier wird nicht der Wert des Elements gesetzt, sondern
 das gesamte Element eretzt.
@@ -927,8 +1050,7 @@ Möchte man nur FATAL-Fehler bekommen, so reicht es den Namespace auf log.FATAL 
 
 ### UUID
 
-Die UUID Funktion ermöglicht es eine UUID vom Typ 4 (Random)
-zu erstellen. Dazu muss einfach nur durch den Konstruktor ein
+Die UUID Funktion ermöglicht es eine UUID vom Typ 4 (Random) zu erstellen. Dazu muss einfach nur durch den Konstruktor ein
 neues UUID-Objekt erstellt werden.
 
     // Neues UUID-Objekt
@@ -936,7 +1058,36 @@ neues UUID-Objekt erstellt werden.
     uuid.toString()
     // -> "f49dc92c-1ac5-4f45-84bc-2645fce5a14a"
     
+### transformValues
 
+Die Funktion Alvine.Util.transformValues() stellt verschiedene Hilfsfunktionen über einen Aufruf bereit. Somit kann ein Wert zentral 
+über eine Funktion bearbeitet werden. Diese Funktion kommt beim Form-Objekt und Template-Objekt zum Einsatz.
+
+    value = 'Hand Mustermann';
+    command = 'strtolower';
+
+    Alvine.Util.transformValues(value, command, function (command, args) {
+            if (command === 'mycommand') {
+                return 'myvalue';
+            }
+        });
+
+Über eine Callback-Funktion kann die Methode um eigene Befehle erweitert werden.
+
+*Folgende Befehle sind verfügbar:*
+
+* strtolower (alles kleingeschrieben),
+* strtoupper (alles großgeschrieben),
+* trim (Leerezichen am Anfang un Ende entfernen)
+* plaintext (HTML-Tags entfernen)
+* rawurlencode (URL-Codirung)
+* ucfirst (Erstes Zeichen groß)
+* ucwords (Jeder Wortanfang groß)
+* intval (Integer)
+* length (Länge der Zeichenkette)
+* base64 (Base64)
+* htmlspecialchars (HTML-Sonderzeichen nach Entities)
+* substring (Teilzeichenkette: Die Parameter werden durch Doppelpunkt getrennt => substring:Anfang:Länge)    
 
 [alvineio]: http://cdn.alvine.io/ 
 [minify]: minify.html 
